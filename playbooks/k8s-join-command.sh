@@ -1,0 +1,1 @@
+kubeadm join 192.168.57.10:6443 --token ju6ldd.yzbpajzgmn208b3a --discovery-token-ca-cert-hash sha256:e6097548554cd165751acace59f0201ba333ae5ef99d5932436a5b587f1ce938 
