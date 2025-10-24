@@ -4,27 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Vagrant-based Kubernetes 1.34.1 cluster automation project using Ansible. It provisions a local 3-node cluster (1 control-plane + 2 workers) with containerd as the container runtime. Currently in **BINARIES ONLY MODE** - installs containerd, kubeadm, kubelet, kubectl without any cluster configuration.
+This is a Vagrant-based Kubernetes 1.34.1 cluster automation project using Ansible. It provisions a local 3-node cluster (1 control-plane + 2 workers) with containerd as the container runtime and Calico CNI. **FULLY AUTOMATED** - a single `vagrant up` command creates a production-ready cluster.
 
 ## Cluster Configuration
 
 - **Kubernetes Version**: 1.34.1 (defined in Vagrantfile)
+- **CNI**: Calico v3.28.0
 - **Pod Network CIDR**: 10.244.0.0/16
-- **Control Plane IP**: 192.168.57.10
-- **Worker IPs**: 192.168.57.11, 192.168.57.12
+- **Node Names**: k8s-cp (control plane), k8s-node-1, k8s-node-2
+- **Node IPs**: 192.168.57.10 (control plane), 192.168.57.11, 192.168.57.12
 - **Container Runtime**: containerd.io v1.7.28
 - **Base Image**: bento/ubuntu-24.04 (for Parallels on ARM64)
 - **Hypervisor**: Parallels (required for ARM64 Macs)
 
 ## Current Status
 
-**BINARIES ONLY MODE**: The current provisioning only installs binaries. NO configuration is applied:
-- ✅ Installs: containerd, kubeadm, kubelet, kubectl
-- ❌ Does NOT configure: swap, sysctl, kernel modules, /etc/hosts, containerd config, or start services
-- ❌ Kubernetes cluster is NOT initialized
-- ❌ CNI is NOT installed
+**FULLY OPERATIONAL** - Complete automated provisioning with `vagrant up`:
+- ✅ System configuration: swap disabled, kernel modules loaded, sysctl configured, /etc/hosts updated
+- ✅ Container runtime: containerd configured with systemd cgroup driver and running
+- ✅ Kubernetes binaries: kubeadm, kubelet, kubectl v1.34.1 installed and running
+- ✅ Control plane: initialized with kubeadm, kubeconfig configured for vagrant and root users
+- ✅ CNI: Calico v3.28.0 installed and operational
+- ✅ Worker nodes: joined to cluster and Ready
+- ✅ Control plane scheduling: untainted for workload scheduling
 
-All configuration must be done manually per MANUAL_STEPS.md
+The cluster is production-ready immediately after `vagrant up` completes.
 
 ## Common Commands
 
@@ -61,7 +65,9 @@ vagrant reload --provision
 # Manual verification from control plane
 vagrant ssh k8s-cp -c "kubectl get nodes -o wide"
 vagrant ssh k8s-cp -c "kubectl get pods -A"
-vagrant ssh k8s-cp -c "cilium status"
+
+# Check Calico status
+vagrant ssh k8s-cp -c "kubectl get pods -n kube-system -l k8s-app=calico-node"
 ```
 
 ### Re-provisioning
@@ -75,61 +81,58 @@ vagrant destroy -f && vagrant up
 
 ## Architecture
 
-### Current Provisioning Flow
+### Provisioning Flow
 
-Currently only **binaries-only.yml** runs on all nodes:
-
-1. **binaries-only.yml** - Binary installation only
-   - Adds Docker repository and GPG key for containerd
-   - Installs containerd.io package (v1.7.28)
-   - Adds Kubernetes repository and GPG key
-   - Installs kubelet, kubeadm, kubectl at version 1.34.1
-   - Holds Kubernetes packages to prevent auto-updates
-   - **Does NOT configure or start any services**
-
-### Planned Provisioning Flow (Not Yet Implemented)
-
-The full cluster provisioning would follow this sequence:
+The automated provisioning follows this sequence:
 
 1. **common.yml** - System configuration for all nodes
    - Disable swap and configure kernel modules (overlay, br_netfilter)
    - Set up networking sysctls for Kubernetes
    - Add all cluster nodes to /etc/hosts
 
-2. **containerd.yml** - Container runtime configuration
+2. **binaries-only.yml** - Kubernetes binary installation
+   - Adds Docker repository and GPG key for containerd
+   - Installs containerd.io package (v1.7.28)
+   - Adds Kubernetes repository and GPG key
+   - Installs kubelet, kubeadm, kubectl at version 1.34.1
+   - Holds Kubernetes packages to prevent auto-updates
+
+3. **containerd.yml** - Container runtime configuration
    - Configure CRI plugin and systemd cgroup driver
    - Critical: Set `SystemdCgroup = true` in config.toml
    - Enable and start containerd service
 
-3. **control-plane.yml** - Control plane initialization
-   - Run `kubeadm init` with `--skip-phases=addon/kube-proxy` (for Cilium)
+4. **control-plane.yml** - Control plane initialization (control plane only)
+   - Run `kubeadm init` to initialize the cluster
    - Generate join command and save to `playbooks/k8s-join-command.sh`
    - Set up kubeconfig for both vagrant and root users
 
-4. **cilium.yml** - CNI installation
-   - Install Cilium CLI from GitHub releases
-   - Deploy Cilium with `kubeProxyReplacement=true`
-   - Wait for Cilium to become ready (5 min timeout)
+5. **calico.yml** - CNI installation (control plane only)
+   - Download Calico v3.28.0 manifest
+   - Deploy Calico CNI
+   - Wait for Calico pods to become ready
 
-5. **untaint.yml** - Allow control plane scheduling
+6. **untaint.yml** - Allow control plane scheduling (control plane only)
    - Remove NoSchedule taint from control plane
 
-6. **workers.yml** - Worker node join
+7. **workers.yml** - Worker node join (worker nodes only)
    - Copy join command from playbooks directory
    - Join worker to the cluster using kubeadm join
 
 ### Key Design Decisions
 
 - **Parallels-only**: VirtualBox doesn't support ARM64 properly on Apple Silicon Macs
-- **Binaries-first approach**: Install all required binaries, then configure manually
-- **No kube-proxy** (planned): Will use `--skip-phases=addon/kube-proxy` because Cilium handles all kube-proxy functionality
-- **Control plane scheduling** (planned): Control plane will be untainted to allow workload scheduling (suitable for dev/test)
+- **Fully automated**: Single `vagrant up` command provisions complete, ready-to-use cluster
+- **Calico CNI**: Using Calico v3.28.0 for pod networking (kube-proxy included)
+- **Control plane scheduling**: Control plane is untainted to allow workload scheduling (suitable for dev/test)
+- **Short hostnames**: k8s-cp, k8s-node-1, k8s-node-2 for easier CLI usage
 
 ### Important Files
 
 - **Vagrantfile** - Node definitions, resource allocation, provisioning orchestration
-- **playbooks/k8s-join-command.sh** - Generated during control-plane provisioning, contains the kubeadm join command with token
+- **playbooks/k8s-join-command.sh** - Auto-generated during control-plane provisioning, contains kubeadm join token (gitignored for security)
 - **verify-cluster.sh** - Health check script for the cluster
+- **.gitignore** - Excludes k8s-join-command.sh (contains sensitive tokens)
 
 ## Modifying the Cluster
 
@@ -166,10 +169,10 @@ If workers fail to join:
 3. Update `playbooks/k8s-join-command.sh` with new command
 4. Reprovision workers: `vagrant provision k8s-node-1 --provision-with ansible`
 
-### Cilium Not Ready
-1. Check Cilium pods: `vagrant ssh k8s-cp -c "kubectl get pods -n kube-system -l k8s-app=cilium"`
-2. Check Cilium status: `vagrant ssh k8s-cp -c "cilium status"`
-3. View logs: `vagrant ssh k8s-cp -c "kubectl logs -n kube-system -l k8s-app=cilium"`
+### Calico Not Ready
+1. Check Calico pods: `vagrant ssh k8s-cp -c "kubectl get pods -n kube-system -l k8s-app=calico-node"`
+2. View Calico controller: `vagrant ssh k8s-cp -c "kubectl get pods -n kube-system -l k8s-app=calico-kube-controllers"`
+3. View logs: `vagrant ssh k8s-cp -c "kubectl logs -n kube-system -l k8s-app=calico-node"`
 
 ### Node NotReady
 1. Verify containerd is running: `vagrant ssh <node> -c "systemctl status containerd"`

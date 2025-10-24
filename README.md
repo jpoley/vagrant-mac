@@ -2,7 +2,7 @@
 
 A local 3-node Kubernetes cluster (1 control plane + 2 workers) provisioned with Vagrant and Ansible on Parallels for ARM64 Macs.
 
-## ⚠️ CURRENT STATUS: FULLY AUTOMATED PROVISIONING
+## ✅ CURRENT STATUS: FULLY AUTOMATED PROVISIONING
 
 This project now includes **complete automated provisioning**. Running `vagrant up` will:
 - ✅ Install and configure containerd runtime
@@ -50,16 +50,15 @@ kubectl get pods -A
 | **Container Runtime** | containerd 1.7.28 |
 | **CNI Plugin** | Calico 3.28.0 |
 | **Base OS** | Ubuntu 24.04 LTS |
-| **Control Plane IP** | 192.168.57.10 |
-| **Worker 1 IP** | 192.168.57.11 |
-| **Worker 2 IP** | 192.168.57.12 |
+| **Node Names** | k8s-cp, k8s-node-1, k8s-node-2 |
+| **Node IPs** | 192.168.57.10, 192.168.57.11, 192.168.57.12 |
 | **Pod Network CIDR** | 10.244.0.0/16 |
 
 ### Node Resources
 
-- **Control Plane**: 2 CPU, 6144 MB RAM
-- **Worker 1**: 2 CPU, 2048 MB RAM
-- **Worker 2**: 2 CPU, 2048 MB RAM
+- **k8s-cp (Control Plane)**: 2 CPU, 6144 MB RAM, IP: 192.168.57.10
+- **k8s-node-1 (Worker)**: 2 CPU, 2048 MB RAM, IP: 192.168.57.11
+- **k8s-node-2 (Worker)**: 2 CPU, 2048 MB RAM, IP: 192.168.57.12
 
 ## Common Commands
 
@@ -124,6 +123,7 @@ kubectl get pods
 ├── README.md                        # This file
 ├── CLAUDE.md                        # Developer/AI assistant guidance
 ├── verify-cluster.sh                # Health check script
+├── .gitignore                       # Excludes sensitive files (join tokens)
 └── playbooks/
     ├── binaries-only.yml            # Install k8s binaries
     ├── common.yml                   # System configuration
@@ -133,7 +133,7 @@ kubectl get pods
     ├── cilium.yml                   # Cilium CNI installation (alternative)
     ├── untaint.yml                  # Allow control plane scheduling
     ├── workers.yml                  # Worker node join
-    └── k8s-join-command.sh          # Join command (auto-generated)
+    └── k8s-join-command.sh          # Join command (auto-generated, gitignored)
 ```
 
 ## Troubleshooting
