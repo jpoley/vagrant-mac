@@ -72,10 +72,10 @@
 ```ruby
 # Vagrantfile line 16
 NODES = [
--  { name: "k8s-control-plane", ip: "192.168.57.10", cpus: 2, memory: 4096, role: "control-plane" },
-+  { name: "k8s-control-plane", ip: "192.168.57.10", cpus: 2, memory: 6144, role: "control-plane" },
-   { name: "k8s-worker-1", ip: "192.168.57.11", cpus: 2, memory: 2048, role: "worker" },
-   { name: "k8s-worker-2", ip: "192.168.57.12", cpus: 2, memory: 2048, role: "worker" }
+-  { name: "k8s-cp", ip: "192.168.57.10", cpus: 2, memory: 4096, role: "control-plane" },
++  { name: "k8s-cp", ip: "192.168.57.10", cpus: 2, memory: 6144, role: "control-plane" },
+   { name: "k8s-node-1", ip: "192.168.57.11", cpus: 2, memory: 2048, role: "worker" },
+   { name: "k8s-node-2", ip: "192.168.57.12", cpus: 2, memory: 2048, role: "worker" }
 ]
 ```
 
@@ -177,7 +177,7 @@ The Vagrantfile provisions nodes in this exact sequence:
 ## Testing Methodology
 
 1. Destroy all VMs: `vagrant destroy -f`
-2. Start fresh: `vagrant up k8s-control-plane`
+2. Start fresh: `vagrant up k8s-cp`
 3. Monitor logs: `/tmp/vagrant-cp-YYYYMMDD-HHMMSS.log`
 4. Verify each stage completes successfully
-5. Check cluster status: `vagrant ssh k8s-control-plane -c "kubectl get nodes"`
+5. Check cluster status: `vagrant ssh k8s-cp -c "kubectl get nodes"`

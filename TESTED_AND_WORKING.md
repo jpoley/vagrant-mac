@@ -17,9 +17,9 @@ This document describes what has been **actually tested** and confirmed working 
 vagrant up
 ```
 - Creates 3 VMs successfully:
-  - k8s-control-plane (2 CPUs, 6GB RAM, IP: 192.168.57.10)
-  - k8s-worker-1 (2 CPUs, 2GB RAM, IP: 192.168.57.11)
-  - k8s-worker-2 (2 CPUs, 2GB RAM, IP: 192.168.57.12)
+  - k8s-cp (2 CPUs, 6GB RAM, IP: 192.168.57.10)
+  - k8s-node-1 (2 CPUs, 2GB RAM, IP: 192.168.57.11)
+  - k8s-node-2 (2 CPUs, 2GB RAM, IP: 192.168.57.12)
 
 ### 2. Binary Installation
 All nodes have the following binaries installed:
@@ -41,9 +41,9 @@ Kubernetes packages are held to prevent automatic upgrades.
 vagrant destroy -f
 
 # SSH into VMs
-vagrant ssh k8s-control-plane
-vagrant ssh k8s-worker-1
-vagrant ssh k8s-worker-2
+vagrant ssh k8s-cp
+vagrant ssh k8s-node-1
+vagrant ssh k8s-node-2
 
 # Check status
 vagrant status
@@ -78,15 +78,15 @@ vagrant status
 
 ```bash
 # Verify binaries are installed
-vagrant ssh k8s-control-plane -c "containerd --version"
-vagrant ssh k8s-control-plane -c "kubeadm version"
-vagrant ssh k8s-control-plane -c "kubectl version --client"
+vagrant ssh k8s-cp -c "containerd --version"
+vagrant ssh k8s-cp -c "kubeadm version"
+vagrant ssh k8s-cp -c "kubectl version --client"
 
 # Check containerd service status (will show as not running)
-vagrant ssh k8s-control-plane -c "systemctl status containerd"
+vagrant ssh k8s-cp -c "systemctl status containerd"
 
 # Check if cluster is initialized (will show no config)
-vagrant ssh k8s-control-plane -c "ls -la /etc/kubernetes/"
+vagrant ssh k8s-cp -c "ls -la /etc/kubernetes/"
 ```
 
 ## Next Steps

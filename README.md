@@ -35,7 +35,7 @@ vagrant up
 ./verify-cluster.sh
 
 # SSH into the control plane
-vagrant ssh k8s-control-plane
+vagrant ssh k8s-cp
 
 # Check cluster status from control plane
 kubectl get nodes
@@ -70,9 +70,9 @@ kubectl get pods -A
 vagrant up
 
 # Start specific node
-vagrant up k8s-control-plane
-vagrant up k8s-worker-1
-vagrant up k8s-worker-2
+vagrant up k8s-cp
+vagrant up k8s-node-1
+vagrant up k8s-node-2
 
 # Stop the cluster
 vagrant halt
@@ -91,19 +91,19 @@ vagrant status
 
 ```bash
 # SSH into nodes
-vagrant ssh k8s-control-plane
-vagrant ssh k8s-worker-1
-vagrant ssh k8s-worker-2
+vagrant ssh k8s-cp
+vagrant ssh k8s-node-1
+vagrant ssh k8s-node-2
 
 # Run single command without interactive shell
-vagrant ssh k8s-control-plane -c "kubectl get nodes"
+vagrant ssh k8s-cp -c "kubectl get nodes"
 ```
 
 ### Kubernetes Operations
 
 ```bash
 # From control plane node
-vagrant ssh k8s-control-plane
+vagrant ssh k8s-cp
 
 # Inside control plane:
 kubectl get nodes
@@ -144,13 +144,13 @@ If workers fail to join with token errors:
 
 ```bash
 # Generate fresh join command
-vagrant ssh k8s-control-plane -c "sudo kubeadm token create --print-join-command"
+vagrant ssh k8s-cp -c "sudo kubeadm token create --print-join-command"
 
 # Copy output to playbooks/k8s-join-command.sh
 
 # Re-provision workers
-vagrant provision k8s-worker-1 --provision-with ansible
-vagrant provision k8s-worker-2 --provision-with ansible
+vagrant provision k8s-node-1 --provision-with ansible
+vagrant provision k8s-node-2 --provision-with ansible
 ```
 
 ### Cluster Not Responding
@@ -160,26 +160,26 @@ vagrant provision k8s-worker-2 --provision-with ansible
 vagrant status
 
 # Check kubelet status on control plane
-vagrant ssh k8s-control-plane -c "sudo systemctl status kubelet"
+vagrant ssh k8s-cp -c "sudo systemctl status kubelet"
 
 # Check containerd status
-vagrant ssh k8s-control-plane -c "sudo systemctl status containerd"
+vagrant ssh k8s-cp -c "sudo systemctl status containerd"
 
 # View kubelet logs
-vagrant ssh k8s-control-plane -c "sudo journalctl -u kubelet -f"
+vagrant ssh k8s-cp -c "sudo journalctl -u kubelet -f"
 ```
 
 ### Pods Not Ready
 
 ```bash
 # Check pod status
-vagrant ssh k8s-control-plane -c "kubectl get pods -A"
+vagrant ssh k8s-cp -c "kubectl get pods -A"
 
 # Check Calico CNI status
-vagrant ssh k8s-control-plane -c "kubectl get pods -n kube-system -l k8s-app=calico-node"
+vagrant ssh k8s-cp -c "kubectl get pods -n kube-system -l k8s-app=calico-node"
 
 # View pod logs
-vagrant ssh k8s-control-plane -c "kubectl logs -n kube-system <pod-name>"
+vagrant ssh k8s-cp -c "kubectl logs -n kube-system <pod-name>"
 ```
 
 ### Start Fresh
@@ -217,7 +217,7 @@ To use `kubectl` from your host machine:
 
 ```bash
 # Copy kubeconfig from control plane
-vagrant ssh k8s-control-plane -c "cat ~/.kube/config" > ~/.kube/vagrant-k8s-config
+vagrant ssh k8s-cp -c "cat ~/.kube/config" > ~/.kube/vagrant-k8s-config
 
 # Use the config
 export KUBECONFIG=~/.kube/vagrant-k8s-config

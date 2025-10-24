@@ -25,7 +25,7 @@ vagrant status
 
 ```bash
 # SSH into each VM
-vagrant ssh k8s-control-plane  # or k8s-worker-1, k8s-worker-2
+vagrant ssh k8s-cp  # or k8s-node-1, k8s-node-2
 
 # Become root
 sudo -i
@@ -56,9 +56,9 @@ sysctl --system
 
 # Configure /etc/hosts
 cat <<EOF >> /etc/hosts
-192.168.57.10 k8s-control-plane
-192.168.57.11 k8s-worker-1
-192.168.57.12 k8s-worker-2
+192.168.57.10 k8s-cp
+192.168.57.11 k8s-node-1
+192.168.57.12 k8s-node-2
 EOF
 
 # Configure containerd
@@ -82,11 +82,11 @@ exit
 exit
 ```
 
-### 3. Control Plane Initialization (Run on k8s-control-plane)
+### 3. Control Plane Initialization (Run on k8s-cp)
 
 ```bash
 # SSH into control plane
-vagrant ssh k8s-control-plane
+vagrant ssh k8s-cp
 
 # Become root
 sudo -i
@@ -110,7 +110,7 @@ kubeadm init \
 # SAVE the kubeadm join command that's printed at the end
 ```
 
-### 3. Configure kubectl for vagrant user (Run on k8s-control-plane)
+### 3. Configure kubectl for vagrant user (Run on k8s-cp)
 
 ```bash
 # Still as root, or switch to vagrant user:
@@ -126,13 +126,13 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 # Verify kubectl works
 kubectl get nodes
-# Should show k8s-control-plane with status "NotReady" (CNI not installed yet)
+# Should show k8s-cp with status "NotReady" (CNI not installed yet)
 ```
 
-### 4. Install Calico CNI (Run on k8s-control-plane)
+### 4. Install Calico CNI (Run on k8s-cp)
 
 ```bash
-# Still as vagrant user on k8s-control-plane
+# Still as vagrant user on k8s-cp
 
 # Download Calico manifest
 curl -O https://raw.githubusercontent.com/projectcalico/calico/v3.28.0/manifests/calico.yaml
@@ -148,26 +148,26 @@ kubectl get pods -n kube-system -l k8s-app=calico-node
 
 # Check node is now Ready
 kubectl get nodes
-# Should show k8s-control-plane with status "Ready"
+# Should show k8s-cp with status "Ready"
 ```
 
 ### 5. Untaint Control Plane (Optional - allows pod scheduling on control plane)
 
 ```bash
-# Still as vagrant user on k8s-control-plane
+# Still as vagrant user on k8s-cp
 
 # Remove NoSchedule taint
-kubectl taint nodes k8s-control-plane node-role.kubernetes.io/control-plane:NoSchedule-
+kubectl taint nodes k8s-cp node-role.kubernetes.io/control-plane:NoSchedule-
 
 # Verify taint is removed
-kubectl describe node k8s-control-plane | grep -i taint
+kubectl describe node k8s-cp | grep -i taint
 # Should show "Taints: <none>"
 ```
 
-### 6. Generate Join Command for Workers (Run on k8s-control-plane)
+### 6. Generate Join Command for Workers (Run on k8s-cp)
 
 ```bash
-# Still as vagrant user on k8s-control-plane
+# Still as vagrant user on k8s-cp
 
 # Generate new join command (in case you lost the original)
 kubeadm token create --print-join-command
@@ -175,11 +175,11 @@ kubeadm token create --print-join-command
 # Copy this entire command - you'll need it for each worker
 ```
 
-### 7. Join Worker Node 1 (Run on k8s-worker-1)
+### 7. Join Worker Node 1 (Run on k8s-node-1)
 
 ```bash
 # From host, SSH to worker-1
-vagrant ssh k8s-worker-1
+vagrant ssh k8s-node-1
 
 # Become root
 sudo -i
@@ -199,11 +199,11 @@ exit
 exit
 ```
 
-### 8. Join Worker Node 2 (Run on k8s-worker-2)
+### 8. Join Worker Node 2 (Run on k8s-node-2)
 
 ```bash
 # From host, SSH to worker-2
-vagrant ssh k8s-worker-2
+vagrant ssh k8s-node-2
 
 # Become root
 sudo -i
@@ -219,18 +219,18 @@ exit
 exit
 ```
 
-### 9. Verify Cluster (Run on k8s-control-plane)
+### 9. Verify Cluster (Run on k8s-cp)
 
 ```bash
 # SSH back to control plane
-vagrant ssh k8s-control-plane
+vagrant ssh k8s-cp
 
 # Check all nodes are Ready
 kubectl get nodes
 # Should show:
-# k8s-control-plane   Ready    control-plane   <age>   v1.34.1
-# k8s-worker-1        Ready    <none>          <age>   v1.34.1
-# k8s-worker-2        Ready    <none>          <age>   v1.34.1
+# k8s-cp   Ready    control-plane   <age>   v1.34.1
+# k8s-node-1        Ready    <none>          <age>   v1.34.1
+# k8s-node-2        Ready    <none>          <age>   v1.34.1
 
 # Check all system pods are running
 kubectl get pods -n kube-system
@@ -240,7 +240,7 @@ kubectl get pods -n kube-system -l k8s-app=calico-node
 # All should show "Running" with 1/1 Ready
 ```
 
-### 10. Test Cluster Functionality (Run on k8s-control-plane)
+### 10. Test Cluster Functionality (Run on k8s-cp)
 
 ```bash
 # Still on control plane as vagrant user
@@ -348,7 +348,7 @@ To go back to automatic provisioning, uncomment the sections in `Vagrantfile` st
 
 If you experience VirtualBox "guru meditation" crashes during kubeadm init:
 - Try running kubeadm init with `--v=5` for verbose logging
-- Check VirtualBox VM logs in `~/VirtualBox VMs/k8s-control-plane/Logs/`
+- Check VirtualBox VM logs in `~/VirtualBox VMs/k8s-cp/Logs/`
 - Consider reducing control-plane memory or CPU
 - VirtualBox 7.1.4 on Apple Silicon M2 has known stability issues with Kubernetes
 - Alternative: Use Parallels, VMware Fusion, UTM, or cloud-based VMs
